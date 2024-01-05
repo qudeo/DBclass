@@ -30,12 +30,12 @@ create table student_table2 (
     studentNumber varchar(8),
     studentName varchar(20),
     studentMobile varchar(20),
-	studentMajor varchar(30),
+	studentMajor varchar(30)
     );
     
     select * from student_table;
     insert into student_table(id, studentNumber, studentName, studentMobile, studentMajor)
-		value (1, '20241111', '학생1', '010-XXXX-XXXX','항공과')
+		value (1, '20241111', '학생1', '010-XXXX-XXXX','항공과');
 drop table dept;
 create table dept (
     deptno int,
@@ -642,3 +642,133 @@ select c_name, b_bookname from book b, customer c, orders o where c.id=o.custome
 select sum(o_saleprice), c_name from customer c, orders o where c.id=o.customer_id and c_name='손흥민';
 -- 29. 손흥민 고객의 총 구매수량과 고객명을 함께 조회
 select count(*), c_name from customer c, orders o where c.id=o.customer_id and c_name='손흥민';
+
+-- 30. 가장 비싼 도서의 이름을 조회 
+select * from book order by b_price desc;
+select max(b_price) from book;
+select b_bookname from book where b_price=35000;
+select b_bookname from book where b_price=(select max(b_price) from book);
+-- 31. 책을 구매한 이력이 있는 고객의 이름을 조회
+select * from orders;
+select c_name from customer where id=1 or id=2 or id=3 or id=4;
+select c_name from customer where id in(1,2,3,4);
+select customer_id from orders;
+select c_name from customer where id in(select customer_id from orders);
+-- 32. 도서의 가격(PRICE)과 판매가격(SALEPRICE)의 차이가 가장 많이 나는 주문 조회 
+select * from book;
+select * from orders;
+-- book, orders 조인해서 정가와 판매가 차이 
+select b.b_price-o.o_saleprice from book b, orders o where b.id=o.book_id;
+select max(b.b_price-o.o_saleprice) from book b, orders o where b.id=o.book_id;
+select * from book b, orders o where b.id=o.book_id and b.b_price-o.o_saleprice=6000;
+select * from book b, orders o where b.id=o.book_id and 
+		b.b_price-o.o_saleprice=(select max(b.b_price-o.o_saleprice) from book b, orders o where b.id=o.book_id);
+-- 33. 고객별 평균 구매 금액이 도서의 판매 평균 금액 보다 높은 고객의 이름 조회 
+-- 도서 판매 평균 금액 
+select avg(o_saleprice) from orders; -- 11800
+-- 고객별 평균 구매 금액(group by)
+select c.c_name, avg(o.o_saleprice) from orders o, customer c where c.id=o.customer_id group by c.c_name;
+select c.c_name, avg(o.o_saleprice) from orders o, customer c where c.id=o.customer_id 
+	group by c.c_name having avg(o.o_saleprice) > 11800;
+select c.c_name, avg(o.o_saleprice) from orders o, customer c where c.id=o.customer_id 
+	group by c.c_name having avg(o.o_saleprice) > (select avg(o_saleprice) from orders);    
+-- 34. 고객번호가 5인 고객의 주소를 대한민국 인천으로 변경 
+update customer set c_address='대한민국 인천' where id=5;
+-- 35. 김씨 성을 가진 고객이 주문한 총 판매액 조회
+-- 김씨 성의 고객번호
+select id from customer where c_name like '김%';
+select sum(o_saleprice) from orders where customer_id=2 or customer_id=3;
+select sum(o_saleprice) from orders where customer_id in(2,3);
+select sum(o_saleprice) from orders where customer_id in(select id from customer where c_name like '김%');
+
+-- alter: 테이블의 구조를 변경할 때(컬럼이름 변경, 타입 변경, 컬럼삭제, 제약조건 추가 등)
+create table student(
+	id bigint,
+    s_name varchar(20),
+    s_mobile int
+);
+-- 테이블의 구조 확인
+desc student;
+desc book;
+-- 기존 컬럼에 제약조건 추가 
+alter table student add constraint primary key(id);
+-- 기존 컬럼 타입 변경 
+alter table student modify s_mobile varchar(30);
+-- 컬럼 추가 
+alter table student add s_major varchar(30);
+-- 컬럼 이름 변경 
+alter table student change s_mobile s_phone varchar(30);
+-- 컬럼 삭제 
+alter table student drop s_major;
+
+drop table if exists category_table;
+create table category_table (
+id bigint auto_increment,
+category_name varchar (20) not null,
+
+constraint pk_category_table primary key(id)
+);
+
+drop table if exists board_file_table;
+create table board_file_table (
+id bigint auto_increment,
+orginal_file_name varchar (100),
+stored_file_name varchar (100),
+board_id bigint,
+
+constraint pk_board_file_table primary key(id),
+constraint fk_board_file_table_b foreign key(board_id) references board_table(id)
+);
+
+drop table if exists board_table;
+create table board_table (
+id bigint auto_increment,
+board_title varchar (50) not null,
+board_writer varchar (30) not null,
+board_contents varchar (500),
+board_hits int,
+board_created_at datetime,
+board_updated_at datetime,
+board_file_attached int,
+member_id bigint,
+category_id bigint,
+
+constraint pk_board_table primary key(id),
+constraint fk_board_table_c foreign key(category_id) references category_table(id),
+constraint fk_board_table_m foreign key(member_id) references member_table(id)
+);
+
+drop table if exists member_table;
+create table member_table (
+id bigint auto_increment,
+member_email varchar (30) not null,
+member_name varchar (20) not null,
+member_password varchar (20) not null,
+
+constraint pk_member_table primary key(id)
+);
+
+drop table if exists comment_table;
+create table comment_table (
+id bigint auto_increment,
+comment_writer varchar (30) not null,
+comment_contents varchar (200) not null,
+comment_created_at datetime,
+board_id bigint,
+member_id bigint,
+
+constraint pk_member_table primary key(id),
+constraint fk_comment_table_b foreign key(board_id) references board_table(id),
+constraint fk_comment_table_m foreign key(member_id) references member_table(id)
+);
+
+drop table if exists good_table;
+create table good_table (
+id bigint auto_increment,
+comment_id bigint,
+member_id bigint,
+
+constraint pk_good_table primary key(id),
+constraint fk_good_table_b foreign key(comment_id) references comment_table(id),
+constraint fk_good_table_m foreign key(member_id) references member_table(id)
+);
