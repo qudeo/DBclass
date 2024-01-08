@@ -704,13 +704,13 @@ alter table student drop s_major;
 drop table if exists category_table;
 create table category_table (
 id bigint auto_increment,
-category_name varchar (20) not null,
+category_name varchar (20) not null unique,
 
 constraint pk_category_table primary key(id)
 );
 
 drop table if exists board_file_table;
-create table board_file_table (
+create table board_file(
 id bigint auto_increment,
 orginal_file_name varchar (100),
 stored_file_name varchar (100),
@@ -726,22 +726,22 @@ id bigint auto_increment,
 board_title varchar (50) not null,
 board_writer varchar (30) not null,
 board_contents varchar (500),
-board_hits int,
-board_created_at datetime,
-board_updated_at datetime,
-board_file_attached int,
+board_hits int default 0,
+board_created_at datetime default now(),
+board_updated_at datetime on update now(),
+board_file_attached int default 0,
 member_id bigint,
 category_id bigint,
 
 constraint pk_board_table primary key(id),
-constraint fk_board_table_c foreign key(category_id) references category_table(id),
-constraint fk_board_table_m foreign key(member_id) references member_table(id)
+constraint fk_board_table_c foreign key(category_id) references category_table(id) on delete set null,
+constraint fk_board_table_m foreign key(member_id) references member_table(id) on delete cascade
 );
 
 drop table if exists member_table;
 create table member_table (
 id bigint auto_increment,
-member_email varchar (30) not null,
+member_email varchar (30) not null unique,
 member_name varchar (20) not null,
 member_password varchar (20) not null,
 
@@ -758,8 +758,8 @@ board_id bigint,
 member_id bigint,
 
 constraint pk_member_table primary key(id),
-constraint fk_comment_table_b foreign key(board_id) references board_table(id),
-constraint fk_comment_table_m foreign key(member_id) references member_table(id)
+constraint fk_comment_table_b foreign key(board_id) references board_table(id) on delete cascade,
+constraint fk_comment_table_m foreign key(member_id) references member_table(id) on delete cascade
 );
 
 drop table if exists good_table;
@@ -769,8 +769,8 @@ comment_id bigint,
 member_id bigint,
 
 constraint pk_good_table primary key(id),
-constraint fk_good_table_b foreign key(comment_id) references comment_table(id),
-constraint fk_good_table_m foreign key(member_id) references member_table(id)
+constraint fk_good_table_b foreign key(comment_id) references comment_table(id) on delete cascade,
+constraint fk_good_table_m foreign key(member_id) references member_table(id) on delete cascade
 );
 
 -- 회원 기능
@@ -794,3 +794,48 @@ select * from member_table where id=1;
 update member_table set member_password='0000' where id=1;
 -- 7. 회원 삭제 또는 탈퇴 
 delete from member_table where id=3;
+
+-- 게시글 카테고리 
+-- 게시판 카테고리는 자유게시판, 공지사항, 가입인사 세가지가 있음.
+-- 카테고리 세가지 미리 저장
+insert into category_table (category_name) values ('자유게시판');
+insert into category_table (category_name) values ('공지사항');
+insert into category_table (category_name) values ('가입인사');
+select * from category_table;
+-- 게시판 기능 
+-- 1. 게시글 작성(파일첨부 x) 3개 이상 
+select * from board_table;
+-- 1번 회원이 자유게시판 글 2개, 공지사항 글 1개 작성 
+insert into board_table (board_title, board_writer, board_contents, member_id, category_id) values ('자유게시판1', 'aa@aa.com', '자유게시판1.1', 1, 1);
+insert into board_table (board_title, board_writer, board_contents, member_id, category_id) values ('자유게시판2', 'aa@aa.com', '자유게시판2.1', 1, 1);
+insert into board_table (board_title, board_writer, board_contents, member_id, category_id) values ('공지사항1', 'aa@aa.com', '공지사항1.1', 1, 2);
+-- 2번 회원이 자유게시판 글 3개 작성
+insert into board_table (board_title, board_writer, board_contents, member_id, category_id) values ('자유게시판1', 'bb@bb.com', '자유게시판1.1', 2, 1);
+insert into board_table (board_title, board_writer, board_contents, member_id, category_id) values ('자유게시판2', 'bb@bb.com', '자유게시판2.1', 2, 1);
+insert into board_table (board_title, board_writer, board_contents, member_id, category_id) values ('자유게시판3', 'bb@bb.com', '자유게시판3.1', 2, 1);
+-- 3번 회원이 가입인사 글 1개 작성 
+insert into board_table (board_title, board_writer, board_contents, member_id, category_id) values ('가입인사1', 'cc@cc.com', '가입인사1.1', 3, 3);
+-- 1.1. 게시글 작성(파일첨부 o)
+-- 2번 회원이 파일있는 자유게시판 글 2개 작성
+insert into board_table (board_title, board_writer, board_contents, board_file_attached, member_id, category_id) values ('자유게시판4', 'bb@bb.com', '자유게시판4.1', 1, 2, 1);
+insert into board_table (board_title, board_writer, board_contents, board_file_attached, member_id, category_id) values ('자유게시판5', 'bb@bb.com', '자유게시판5.1', 2, 2, 1);
+-- 2. 게시글 목록 조회 
+-- 2.1 전체글 목록 조회
+select * from board_table;
+-- 2.2 자유게시판 목록 조회 
+select * from board_table where category_id = 1;
+-- 2.3 공지사항 목록 조회 
+select * from board_table where category_id = 2;
+-- 2.4 목록 조회시 카테고리 이름도 함께 나오게 조회
+-- 3. 2번 게시글 조회 (조회수 처리 필요함)
+-- 3.1. 파일 첨부된 게시글 조회 (게시글 내용과 파일을 함께)
+-- 4. 1번 회원이 자유게시판에 첫번째로 작성한 게시글의 제목, 내용 수정
+-- 5. 2번 회원이 자유게시판에 첫번째로 작성한 게시글 삭제 
+-- 7. 페이징 처리(한 페이지당 글 3개씩)
+-- 7.1. 첫번째 페이지
+-- 7.2. 두번째 페이지
+-- 7.3. 세번째 페이지 
+-- 8. 검색(글제목 기준)
+-- 8.1 검색결과를 오래된 순으로 조회 
+-- 8.2 검색결과를 조회수 내림차순으로 조회 
+-- 8.3 검색결과 페이징 처리 
