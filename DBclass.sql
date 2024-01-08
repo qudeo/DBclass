@@ -701,76 +701,66 @@ alter table student change s_mobile s_phone varchar(30);
 -- 컬럼 삭제 
 alter table student drop s_major;
 
-drop table if exists category_table;
-create table category_table (
-id bigint auto_increment,
-category_name varchar (20) not null unique,
-
-constraint pk_category_table primary key(id)
+drop table if exists member_table;
+create table member_table(
+	id 				bigint auto_increment primary key,
+    member_email 	varchar(30) not null unique,
+    member_name 	varchar(20) not null,
+    member_password varchar(20) not null
 );
 
-drop table if exists board_file_table;
-create table board_file(
-id bigint auto_increment,
-orginal_file_name varchar (100),
-stored_file_name varchar (100),
-board_id bigint,
-
-constraint pk_board_file_table primary key(id),
-constraint fk_board_file_table_b foreign key(board_id) references board_table(id)
+drop table if exists category_table;
+create table category_table(
+	id 				bigint auto_increment primary key,
+    category_name	varchar(20) not null unique
 );
 
 drop table if exists board_table;
-create table board_table (
-id bigint auto_increment,
-board_title varchar (50) not null,
-board_writer varchar (30) not null,
-board_contents varchar (500),
-board_hits int default 0,
-board_created_at datetime default now(),
-board_updated_at datetime on update now(),
-board_file_attached int default 0,
-member_id bigint,
-category_id bigint,
-
-constraint pk_board_table primary key(id),
-constraint fk_board_table_c foreign key(category_id) references category_table(id) on delete set null,
-constraint fk_board_table_m foreign key(member_id) references member_table(id) on delete cascade
+create table board_table(
+	id 					bigint auto_increment primary key,
+	board_title			varchar(50) not null,
+    board_writer		varchar(30) not null,
+    board_contents		varchar(500),
+    board_hits			int default 0,
+    board_created_at	datetime default now(),
+    board_updated_at	datetime on update now(),
+    board_file_attached	int default 0, -- 파일 첨부 여부(없으면 0, 있으면 1)
+    member_id 			bigint,
+    category_id			bigint,
+    constraint fk_board foreign key(member_id) references member_table(id) on delete cascade,
+    constraint fk_board_category foreign key(category_id) 
+						references category_table(id) on delete set null
 );
 
-drop table if exists member_table;
-create table member_table (
-id bigint auto_increment,
-member_email varchar (30) not null unique,
-member_name varchar (20) not null,
-member_password varchar (20) not null,
-
-constraint pk_member_table primary key(id)
+drop table if exists board_file_table;
+create table board_file_table(
+	id 					bigint auto_increment primary key,
+	original_file_name	varchar(100), -- 사용자가 업로드한 파일의 이름
+    stored_file_name	varchar(100), -- 관리용 파일 이름(파일이름 생성 로직은 backend에서)
+    -- 증명사진.jpg  91845798217498237-증명사진.jpg
+    board_id			bigint,
+    constraint fk_board_file foreign key(board_id) references board_table(id) on delete cascade
 );
 
 drop table if exists comment_table;
-create table comment_table (
-id bigint auto_increment,
-comment_writer varchar (30) not null,
-comment_contents varchar (200) not null,
-comment_created_at datetime,
-board_id bigint,
-member_id bigint,
-
-constraint pk_member_table primary key(id),
-constraint fk_comment_table_b foreign key(board_id) references board_table(id) on delete cascade,
-constraint fk_comment_table_m foreign key(member_id) references member_table(id) on delete cascade
+create table comment_table(
+	id 					bigint auto_increment primary key,
+    comment_writer		varchar(30) not null,
+    comment_contents	varchar(200) not null,
+    comment_created_at  datetime default now(),
+    board_id			bigint,
+    member_id			bigint,
+    constraint fk_comment_board foreign key(board_id) references board_table(id) on delete cascade,
+    constraint fk_comment_member foreign key(member_id) references member_table(id) on delete cascade
 );
 
 drop table if exists good_table;
-create table good_table (
-id bigint auto_increment,
-comment_id bigint,
-member_id bigint,
-
-constraint pk_good_table primary key(id),
-constraint fk_good_table_b foreign key(comment_id) references comment_table(id) on delete cascade,
-constraint fk_good_table_m foreign key(member_id) references member_table(id) on delete cascade
+create table good_table(
+	id 					bigint auto_increment primary key,
+	comment_id			bigint,
+    member_id			bigint,
+    constraint fk_good_comment foreign key(comment_id) references comment_table(id) on delete cascade,
+    constraint fk_good_member foreign key(member_id) references member_table(id) on delete cascade
 );
 
 -- 회원 기능
@@ -819,23 +809,76 @@ insert into board_table (board_title, board_writer, board_contents, member_id, c
 -- 2번 회원이 파일있는 자유게시판 글 2개 작성
 insert into board_table (board_title, board_writer, board_contents, board_file_attached, member_id, category_id) values ('자유게시판4', 'bb@bb.com', '자유게시판4.1', 1, 2, 1);
 insert into board_table (board_title, board_writer, board_contents, board_file_attached, member_id, category_id) values ('자유게시판5', 'bb@bb.com', '자유게시판5.1', 2, 2, 1);
+-- 첨부된 파일정보를 board_file_table에 저장
+-- 사용자가 첨부한 파일 이름 : 한라산.jpg
+insert into board_file_table (original_file_name, stored_file_name, board_id)
+	values ('한라산.jpg', '22342131323213_음식.jpg', 17);
 -- 2. 게시글 목록 조회 
 -- 2.1 전체글 목록 조회
 select * from board_table;
+select id, board_title, board_writer, board_hits, board_created_at from board_table;
 -- 2.2 자유게시판 목록 조회 
 select * from board_table where category_id = 1;
 -- 2.3 공지사항 목록 조회 
 select * from board_table where category_id = 2;
 -- 2.4 목록 조회시 카테고리 이름도 함께 나오게 조회
+select * from board_table b, category_table c where b.category_id=c.id;
 -- 3. 2번 게시글 조회 (조회수 처리 필요함)
+update board_table set board_hits=board_hits+1 where id=2;
+select * from board_table where id=2;
 -- 3.1. 파일 첨부된 게시글 조회 (게시글 내용과 파일을 함께)
+update board_table set board_hits=board_hits+1 where id=17;
+-- 게시글 내용만 가져옴
+select * from board_table where id=17;
+-- 해당 게시글에 첨부된 파일 정보 가져옴
+select * from board_file_table where board_id=17;
+-- join
+select * from board_table b, board_file_table bf where b.id=bf.board_id and b.id=12;
 -- 4. 1번 회원이 자유게시판에 첫번째로 작성한 게시글의 제목, 내용 수정
+select * from board_table where id=1;
+update board_table set board_title='안녕하십니까_수정', board_contents='월요일 사라져라' where id=1;
 -- 5. 2번 회원이 자유게시판에 첫번째로 작성한 게시글 삭제 
+delete from board_table where id=5;
 -- 7. 페이징 처리(한 페이지당 글 3개씩)
+select * from board_table order by id desc;
+select * from board_table order by id desc limit 0, 3; -- 27, 26, 25
+select * from board_table order by id desc limit 3, 3; -- 24, 23, 22
+select * from board_table order by id desc limit 6, 3; -- 21, 20, 19
+select * from board_table order by id desc limit 9, 3; -- 18, 17, 16
+select * from board_table order by id desc limit 0, 5;
+select * from board_table order by id desc limit 5, 5;
+select * from board_table order by id desc limit 10, 5;
+-- 한페이지당 3개씩 출력하는 경우 전체 글 갯수가 20개라면 필요한 페이지 갯수는? 7개
+select count(*) from board_table;
 -- 7.1. 첫번째 페이지
 -- 7.2. 두번째 페이지
 -- 7.3. 세번째 페이지 
 -- 8. 검색(글제목 기준)
+select * from board_table where board_title like '%오늘%';
 -- 8.1 검색결과를 오래된 순으로 조회 
+select * from board_table where board_title like '%오늘%' order by id asc;
 -- 8.2 검색결과를 조회수 내림차순으로 조회 
+select * from board_table where board_title like '%오늘%' order by board_hits desc;
 -- 8.3 검색결과 페이징 처리 
+select * from board_table where board_title like '%오늘%' order by board_hits desc limit 0, 3;
+
+-- 댓글 기능 
+-- 1. 댓글 작성 
+-- 1.1. 1번 회원이 1번 게시글에 댓글 작성 
+insert into comment_table (comment_writer, comment_contents, board_id, member_id) values ('aa@aa.com', 'ㅋㅋㅋ', 1, 1);
+-- 1.2. 2번 회원이 1번 게시글에 댓글 작성 
+insert into comment_table (comment_writer, comment_contents, board_id, member_id) values ('bb@bb.com', 'ㄹㅇㅋㅋ', 1, 2);
+-- 2. 댓글 조회
+select * from comment_table where id=1;
+select * from board_table b, comment_table c where b.id=c.board_id and b.id=1;
+-- 3. 댓글 좋아요 
+-- 3.1. 1번 회원이 2번 회원이 작성한 댓글에 좋아요 클릭
+insert into good_table (comment_id, member_id) values (2, 1);
+-- 좋아요 했는지 체크
+select id from good_table where comment_id=2 and member_id=1;
+-- 좋아요 취소
+delete from good_table where id=1;
+-- 3.2. 3번 회원이 2번 회원이 작성한 댓글에 좋아요 클릭 
+insert into good_table (comment_id, member_id) values (2, 3);
+-- 4. 댓글 조회시 좋아요 갯수도 함께 조회
+select count(*) from good_table where comment_id=2;
