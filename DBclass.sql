@@ -1076,3 +1076,41 @@ select
 				when v_confirm='N' then '미확인'
 		end as v_confirm
 	from tbl_vote_202005;
+    
+-- 전체 쿼리
+select 
+		-- 이름
+		v_name as '이름', 
+        -- 생년월일
+        concat(
+				case when substr(v_jumin, 7, 1) in ('1', '2') then '19'
+					 when substr(v_jumin, 7, 1) in ('3', '4') then '20'
+				end, 
+				substr(v_jumin, 1, 2), '년', substr(v_jumin, 3, 2), '월', substr(v_jumin, 5, 2), '일생'
+			 ) 
+		as '생년월일',
+        -- 나이
+        concat(
+				'만',
+                cast(date_format(now(), '%Y') as unsigned) -
+                concat(
+						case when substr(v_jumin, 7, 1) in ('1', '2') then '19'
+							 when substr(v_jumin, 7, 1) in ('3', '4') then '20'
+							 end,
+                        substr(v_jumin, 1, 2)     
+					  ),
+				'세'
+			 ) as '나이',
+        -- 성별
+        case when substr(v_jumin, 7, 1) in ('1', '3') then '남'
+			when substr(v_jumin, 7, 1) in ('2', '4') then '여'
+			end as '성별',
+        -- 후보번호
+        m_no as '후보번호',
+        -- 투표시간
+        concat(substr(v_time, 1, 2), ':', substr(v_time, 3, 2)) as '투표시간', 
+        -- 유권자확인
+		case when v_confirm='Y' then '확인'
+			 when v_confirm='N' then '미확인'
+			end as '유권자확인'
+	from tbl_vote_202005;
